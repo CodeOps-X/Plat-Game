@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Platformer Game</title>
+    <title>2Tag</title>
     <style>
         body {
             margin: 0;
@@ -27,7 +27,7 @@
 
         const gravity = 1;
 
-        const player = {
+        const player1 = {
             x: 50,
             y: 50,
             width: 50,
@@ -38,6 +38,41 @@
             speed: 5,
             jumpForce: 15,
             jumpsRemaining: 2,
+            tagger: true,
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            },
+            update() {
+                this.dy += gravity;
+                this.x += this.dx;
+                this.y += this.dy;
+
+                // Prevent falling through the ground
+                if (this.y + this.height > canvas.height) {
+                    this.y = canvas.height - this.height;
+                    this.dy = 0;
+                    this.jumpsRemaining = 2;
+                }
+
+                // Prevent going out of bounds
+                if (this.x < 0) this.x = 0;
+                if (this.x + this.width > canvas.width) this.x = canvas.width - this.width;
+            }
+        };
+
+        const player2 = {
+            x: canvas.width - 100,
+            y: 50,
+            width: 50,
+            height: 50,
+            color: 'blue',
+            dx: 0,
+            dy: 0,
+            speed: 5,
+            jumpForce: 15,
+            jumpsRemaining: 2,
+            tagger: false,
             draw() {
                 ctx.fillStyle = this.color;
                 ctx.fillRect(this.x, this.y, this.width, this.height);
@@ -66,11 +101,6 @@
             { x: 800, y: 500, width: 250, height: 20 }
         ];
 
-        const enemies = [
-            { x: 200, y: canvas.height - 50, width: 50, height: 50, color: 'blue', speed: 2, direction: 1 },
-            { x: 600, y: canvas.height - 50, width: 50, height: 50, color: 'blue', speed: 2, direction: -1 }
-        ];
-
         function drawPlatforms() {
             ctx.fillStyle = 'green';
             platforms.forEach(platform => {
@@ -78,35 +108,7 @@
             });
         }
 
-        function drawEnemies() {
-            enemies.forEach(enemy => {
-                ctx.fillStyle = enemy.color;
-                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
-            });
-        }
-
-        function updateEnemies() {
-            enemies.forEach(enemy => {
-                enemy.x += enemy.speed * enemy.direction;
-
-                // Reverse direction at edges
-                if (enemy.x < 0 || enemy.x + enemy.width > canvas.width) {
-                    enemy.direction *= -1;
-                }
-
-                // Collision with player
-                if (
-                    player.x < enemy.x + enemy.width &&
-                    player.x + player.width > enemy.x &&
-                    player.y < enemy.y + enemy.height &&
-                    player.y + player.height > enemy.y
-                ) {
-                    console.log('Player hit!');
-                }
-            });
-        }
-
-        function checkPlatformCollision() {
+        function checkPlatformCollision(player) {
             platforms.forEach(platform => {
                 if (
                     player.x < platform.x + platform.width &&
@@ -121,28 +123,62 @@
             });
         }
 
+        function checkTagCollision() {
+            if (
+                player1.x < player2.x + player2.width &&
+                player1.x + player1.width > player2.x &&
+                player1.y < player2.y + player2.height &&
+                player1.y + player1.height > player2.y
+            ) {
+                if (player1.tagger) {
+                    player1.tagger = false;
+                    player2.tagger = true;
+                    console.log('Player 2 is now the tagger!');
+                } else if (player2.tagger) {
+                    player2.tagger = false;
+                    player1.tagger = true;
+                    console.log('Player 1 is now the tagger!');
+                }
+            }
+        }
+
         function gameLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawPlatforms();
-            drawEnemies();
-            player.draw();
-            player.update();
-            updateEnemies();
-            checkPlatformCollision();
+            player1.draw();
+            player2.draw();
+            player1.update();
+            player2.update();
+            checkPlatformCollision(player1);
+            checkPlatformCollision(player2);
+            checkTagCollision();
             requestAnimationFrame(gameLoop);
         }
 
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowRight') player.dx = player.speed;
-            if (e.key === 'ArrowLeft') player.dx = -player.speed;
-            if (e.key === 'ArrowUp' && player.jumpsRemaining > 0) {
-                player.dy = -player.jumpForce;
-                player.jumpsRemaining--;
+            // Player 1 controls
+            if (e.key === 'ArrowRight') player1.dx = player1.speed;
+            if (e.key === 'ArrowLeft') player1.dx = -player1.speed;
+            if (e.key === 'ArrowUp' && player1.jumpsRemaining > 0) {
+                player1.dy = -player1.jumpForce;
+                player1.jumpsRemaining--;
+            }
+
+            // Player 2 controls
+            if (e.key === 'd') player2.dx = player2.speed;
+            if (e.key === 'a') player2.dx = -player2.speed;
+            if (e.key === 'w' && player2.jumpsRemaining > 0) {
+                player2.dy = -player2.jumpForce;
+                player2.jumpsRemaining--;
             }
         });
 
         document.addEventListener('keyup', (e) => {
-            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') player.dx = 0;
+            // Player 1 controls
+            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') player1.dx = 0;
+
+            // Player 2 controls
+            if (e.key === 'd' || e.key === 'a') player2.dx = 0;
         });
 
         gameLoop();
