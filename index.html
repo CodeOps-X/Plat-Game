@@ -37,7 +37,7 @@
             dy: 0,
             speed: 5,
             jumpForce: 15,
-            isJumping: false,
+            jumpsRemaining: 2,
             draw() {
                 ctx.fillStyle = this.color;
                 ctx.fillRect(this.x, this.y, this.width, this.height);
@@ -51,7 +51,7 @@
                 if (this.y + this.height > canvas.height) {
                     this.y = canvas.height - this.height;
                     this.dy = 0;
-                    this.isJumping = false;
+                    this.jumpsRemaining = 2;
                 }
 
                 // Prevent going out of bounds
@@ -66,10 +66,43 @@
             { x: 800, y: 500, width: 250, height: 20 }
         ];
 
+        const enemies = [
+            { x: 200, y: canvas.height - 50, width: 50, height: 50, color: 'blue', speed: 2, direction: 1 },
+            { x: 600, y: canvas.height - 50, width: 50, height: 50, color: 'blue', speed: 2, direction: -1 }
+        ];
+
         function drawPlatforms() {
             ctx.fillStyle = 'green';
             platforms.forEach(platform => {
                 ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+            });
+        }
+
+        function drawEnemies() {
+            enemies.forEach(enemy => {
+                ctx.fillStyle = enemy.color;
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+            });
+        }
+
+        function updateEnemies() {
+            enemies.forEach(enemy => {
+                enemy.x += enemy.speed * enemy.direction;
+
+                // Reverse direction at edges
+                if (enemy.x < 0 || enemy.x + enemy.width > canvas.width) {
+                    enemy.direction *= -1;
+                }
+
+                // Collision with player
+                if (
+                    player.x < enemy.x + enemy.width &&
+                    player.x + player.width > enemy.x &&
+                    player.y < enemy.y + enemy.height &&
+                    player.y + player.height > enemy.y
+                ) {
+                    console.log('Player hit!');
+                }
             });
         }
 
@@ -82,7 +115,7 @@
                     player.y + player.height + player.dy >= platform.y
                 ) {
                     player.dy = 0;
-                    player.isJumping = false;
+                    player.jumpsRemaining = 2;
                     player.y = platform.y - player.height;
                 }
             });
@@ -91,8 +124,10 @@
         function gameLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawPlatforms();
+            drawEnemies();
             player.draw();
             player.update();
+            updateEnemies();
             checkPlatformCollision();
             requestAnimationFrame(gameLoop);
         }
@@ -100,9 +135,9 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowRight') player.dx = player.speed;
             if (e.key === 'ArrowLeft') player.dx = -player.speed;
-            if (e.key === 'ArrowUp' && !player.isJumping) {
+            if (e.key === 'ArrowUp' && player.jumpsRemaining > 0) {
                 player.dy = -player.jumpForce;
-                player.isJumping = true;
+                player.jumpsRemaining--;
             }
         });
 
